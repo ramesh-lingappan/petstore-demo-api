@@ -1,0 +1,92 @@
+plugins {
+    id 'java'
+    id "org.openapi.generator" version "4.1.1"
+}
+
+group 'com.petstore'
+version '0.1'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+def petstoreApiYml = "$rootDir/src/main/resources/petstore-api.yml".toString()
+
+/* java client configuration */
+task buildPetStoreJavaClient(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = "java"
+    inputSpec = petstoreApiYml
+    outputDir = "$buildDir/java-client".toString()
+
+    groupId = "$project.group"
+    id = "$project.name-java-client"
+    version = "$project.version"
+    apiPackage = "com.petstore.api"
+    invokerPackage = "com.petstore.api.invoker"
+    modelPackage = "com.petstore.api.model"
+    enablePostProcessFile = true
+    skipOverwrite = false
+    configOptions = [
+            java8               : "true",
+            dateLibrary         : "java8",
+            serializationLibrary: "jackson",
+            library             : "resttemplate",
+            useBeanValidation   : "true",
+            enableBuilderSupport: "true"
+    ]
+    systemProperties = [
+            modelDocs: "true"
+    ]
+}
+
+task generateCode(type: Copy, dependsOn: ['buildPetStoreJavaClient']) {
+
+    def srcPath = "$buildDir/java-client"
+    def targetPath = "$rootDir/docs"
+
+    // copy docs
+    from(srcPath + "/docs")
+    into(targetPath)
+    include('*.md')
+}
+
+// code will be generated during compilation
+compileJava.dependsOn(generateCode)
+
+
+// attach the generated folder as source for this project
+sourceSets {
+    main {
+        java {
+            srcDir "$buildDir/java-client/src/main/java"
+        }
+    }
+}
+
+
+// these dependencies are required for the generated code in order to build
+ext {
+    swagger_annotations_version = "1.5.22"
+    jackson_version = "2.9.9"
+    jackson_databind_version = "2.9.9"
+    spring_web_version = "4.3.9.RELEASE"
+    jodatime_version = "2.9.9"
+    junit_version = "4.12"
+    validation_version = "2.0.1.Final"
+}
+
+dependencies {
+    compile "io.swagger:swagger-annotations:$swagger_annotations_version"
+    compile "com.google.code.findbugs:jsr305:3.0.2"
+    compile "org.springframework:spring-web:$spring_web_version"
+    compile "com.fasterxml.jackson.core:jackson-core:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-annotations:$jackson_version"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson_databind_version"
+    compile "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:$jackson_version"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jackson_version"
+    testCompile "junit:junit:$junit_version"
+    compile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+    compile "javax.validation:validation-api:$validation_version"
+}
